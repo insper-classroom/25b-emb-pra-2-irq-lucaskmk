@@ -6,6 +6,7 @@ const int BTN_PIN_R = 28;
 const int LED = 4;
 
 volatile bool btn_fall_flag = false;
+volatile uint32_t press_count = 0;
 
 void btn_callback(uint gpio, uint32_t events) {
   if (events == 0x4) { // fall edge
@@ -29,7 +30,8 @@ int main() {
   while (true) {
     if (btn_fall_flag) {
       btn_fall_flag = false;
-      gpio_put(LED, !gpio_get_out_level(LED));
+      press_count++;
+      gpio_put(LED, press_count % 2);
     }
   }
 }
