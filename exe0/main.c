@@ -15,38 +15,38 @@ static void btn_isr(uint gpio, uint32_t events) {
 }
 
 int main(void) {
-stdio_init_all();
+    stdio_init_all();
 
-gpio_init(BTN_PIN);
-gpio_set_dir(BTN_PIN, GPIO_IN);
-gpio_pull_up(BTN_PIN);
+    gpio_init(BTN_PIN);
+    gpio_set_dir(BTN_PIN, GPIO_IN);
+    gpio_pull_up(BTN_PIN);
 
-gpio_set_irq_enabled_with_callback(
-  BTN_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &btn_isr);
+    gpio_set_irq_enabled_with_callback(
+        BTN_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &btn_isr);
 
-volatile int capture_flag = 0;
-bool was_pressed = false;
+    int capture_flag = 0;   // <-- corrigido, não é mais volatile
+    bool was_pressed = false;
 
-while (true) {
-  if (fall_flag) {
-      fall_flag = false;
-      if (!was_pressed) {
-          printf("btn pressed \n");
-          was_pressed = true;
-      }
-  }
-  if (rise_flag) {
-      rise_flag = false;
-      if (was_pressed) {
-          printf("btn released \n");
-          capture_flag = 1;
-          was_pressed = false;
-      }
-  }
-  if (capture_flag) {
-      capture_flag = 0;
-  }
+    while (true) {
+        if (fall_flag) {
+            fall_flag = false;
+            if (!was_pressed) {
+                printf("btn pressed \n");
+                was_pressed = true;
+            }
+        }
+        if (rise_flag) {
+            rise_flag = false;
+            if (was_pressed) {
+                printf("btn released \n");
+                capture_flag = 1;
+                was_pressed = false;
+            }
+        }
+        if (capture_flag) {
+            capture_flag = 0;
+        }
 
-  tight_loop_contents();
-}
+        tight_loop_contents();
+    }
 }
