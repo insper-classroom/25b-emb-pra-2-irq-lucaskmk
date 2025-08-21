@@ -1,45 +1,52 @@
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
+#include <stdbool.h>
 
-const int BTN_PIN_R = 28;
+static const uint BTN_PIN = 28;
 
-int btn_flag;
+static volatile bool fall_flag = false;
+static volatile bool rise_flag = false;
 
-void btn_callback(uint gpio, uint32_t events) {
-  if (events == 0x4) { // fall edge
-
-    printf("btn pressed \n");
-
-    while (!gpio_get(BTN_PIN_R)) {
-      sleep_ms(1);
-    }
-
-
-    printf("btn released \n");
-
-    sleep_ms(1);
-    btn_flag = 1;
-  }
+static void btn_isr(uint gpio, uint32_t events) {
+    if (gpio != BTN_PIN) return;
+    if (events & GPIO_IRQ_EDGE_FALL) fall_flag = true;
+    if (events & GPIO_IRQ_EDGE_RISE) rise_flag = true;
 }
 
-int main() {
-  stdio_init_all();
-  gpio_init(BTN_PIN_R);
-  gpio_set_dir(BTN_PIN_R, GPIO_IN);
-  gpio_pull_up(BTN_PIN_R);
-  gpio_set_irq_enabled_with_callback(BTN_PIN_R, GPIO_IRQ_EDGE_FALL, true,&btn_callback);
+int main(void) {
+stdio_init_all();
 
-  volatile int capture_flag = 0;
-  int a;
-  while (1) {
-    if (btn_flag) {
-      capture_flag = 1;
-      btn_flag = 0;
-    }
+gpio_init(BTN_PIN);
+gpio_set_dir(BTN_PIN, GPIO_IN);
+gpio_pull_up(BTN_PIN);
 
-    if (capture_flag) {
-    }
+gpio_set_irq_enabled_with_callback(
+  BTN_PIN, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true, &btn_isr);
 
+volatile int capture_flag = 0;
+bool was_pressed = false;
+
+while (true) {
+  if (fall_flag) {
+      fall_flag = false;
+      if (!was_pressed) {
+          printf("btn pressed \n");
+          was_pressed = true;
+      }
   }
+  if (rise_flag) {
+      rise_flag = false;
+      if (was_pressed) {
+          printf("btn released \n");
+          capture_flag = 1;
+          was_pressed = false;
+      }
+  }
+  if (capture_flag) {
+      capture_flag = 0;
+  }
+
+  tight_loop_contents();
+}
 }
